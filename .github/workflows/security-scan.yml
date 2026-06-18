@@ -1,0 +1,76 @@
+name: SecOps Test Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-scan:
+    name: Build and Security Scan
+    runs-on: [self-hosted, devsecops-trial]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare temporary Maven cache
+        run: |
+          mkdir -p .ci-cache/m2
+
+      - name: Build and SonarQube Scan inside Maven container
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          docker run --rm \
+            -v "$PWD":/workspace \
+            -v "$PWD/.ci-cache/m2":/root/.m2 \
+            -w /workspace \
+            -e SONAR_TOKEN="$SONAR_TOKEN" \
+            -e SONAR_HOST_URL="$SONAR_HOST_URL" \
+            maven:3.9.6-eclipse-temurin-17 \
+            bash -c '
+              mvn -B clean package -DskipTests &&
+              mvn -B sonar:sonar \
+                -Dsonar.projectKey=devsecops-security-pipeline \
+                -Dsonar.projectName=devsecops-security-pipeline \
+                -Dsonar.host.url="$SONAR_HOST_URL" \
+                -Dsonar.token="$SONAR_TOKEN"
+            '
+
+      - name: Build Docker image
+        run: |
+          docker build -t secops-vulnerable-demo:${{ github.sha }} .
+
+      - name: Trivy Filesystem Scan
+        run: |
+          trivy fs \
+            --exit-code 0 \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --format table \
+            .
+
+      - name: Trivy Docker Image Scan
+        run: |
+          trivy image \
+            --exit-code 0 \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --format table \
+            secops-vulnerable-demo:${{ github.sha }}
+
+      - name: Trivy IaC Scan
+        run: |
+          trivy config \
+            --exit-code 0 \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --format table \
+            .
+
+      - name: Cleanup temporary files and project image
+        if: always()
+        run: |
+          rm -rf .ci-cache
+          docker rmi secops-vulnerable-demo:${{ github.sha }} || true
