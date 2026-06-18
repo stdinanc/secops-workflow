@@ -18,7 +18,7 @@ jobs:
 
       - name: Prepare temporary Maven and Sonar cache
         run: |
-          mkdir -p .ci-cache/m2
+          mkdir -p .ci-cache/m2/repository
           mkdir -p .ci-cache/sonar
 
       - name: Build and SonarQube Scan inside Maven container
@@ -28,16 +28,18 @@ jobs:
         run: |
           docker run --rm \
             --network host \
+            --user "$(id -u):$(id -g)" \
             -v "$PWD":/workspace \
-            -v "$PWD/.ci-cache/m2":/root/.m2 \
-            -v "$PWD/.ci-cache/sonar":/root/.sonar/cache \
             -w /workspace \
             -e SONAR_TOKEN="$SONAR_TOKEN" \
             -e SONAR_HOST_URL="$SONAR_HOST_URL" \
             maven:3.9.6-eclipse-temurin-17 \
             bash -c '
-              mvn -B clean package -DskipTests &&
+              mvn -B clean package -DskipTests \
+                -Dmaven.repo.local=/workspace/.ci-cache/m2/repository &&
               mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
+                -Dmaven.repo.local=/workspace/.ci-cache/m2/repository \
+                -Dsonar.userHome=/workspace/.ci-cache/sonar \
                 -Dsonar.projectKey=devsecops-security-pipeline \
                 -Dsonar.projectName=devsecops-security-pipeline \
                 -Dsonar.host.url="$SONAR_HOST_URL" \
