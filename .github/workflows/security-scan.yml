@@ -50,6 +50,16 @@ jobs:
         run: |
           docker build -t secops-vulnerable-demo:${{ github.sha }} .
 
+      - name: Configure Maven local repo for Trivy
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <localRepository>$PWD/.ci-cache/m2/repository</localRepository>
+            <offline>true</offline>
+          </settings>
+          EOF
+
       - name: Trivy Filesystem Scan
         run: |
           trivy fs \
