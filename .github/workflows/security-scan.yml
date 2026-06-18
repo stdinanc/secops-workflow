@@ -16,10 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare temporary Maven and Sonar cache
+      - name: Prepare cache directories
         run: |
           mkdir -p .ci-cache/m2/repository
           mkdir -p .ci-cache/sonar
+          mkdir -p .ci-cache/trivy
 
       - name: Build and SonarQube Scan inside Maven container
         env:
@@ -61,27 +62,36 @@ jobs:
           EOF
 
       - name: Trivy Filesystem Scan
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.ci-cache/trivy
         run: |
           trivy fs \
             --exit-code 0 \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
             --format table \
+            --timeout 20m \
             .
 
       - name: Trivy Docker Image Scan
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.ci-cache/trivy
         run: |
           trivy image \
             --exit-code 0 \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
             --format table \
+            --timeout 20m \
             secops-vulnerable-demo:${{ github.sha }}
 
       - name: Trivy IaC Scan
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.ci-cache/trivy
         run: |
           trivy config \
             --exit-code 0 \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
             --format table \
+            --timeout 20m \
             .
 
       - name: Cleanup temporary files and project image
