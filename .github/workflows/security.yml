@@ -1,0 +1,37 @@
+name: DevSecOps Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      scan_profile:
+        description: "Scan profili"
+        required: false
+        default: "standard"
+        type: choice
+        options:
+          - standard
+          - strict
+          - third-party
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: read
+
+jobs:
+  security:
+    name: Security Pipeline
+    uses: stdinanc/devsecops-security-platform/.github/workflows/security-pipeline.yml@v1
+    with:
+      scan_profile: ${{ github.event.inputs.scan_profile || 'standard' }}
+      sonar_project_key: ${{ github.repository_owner }}_${{ github.event.repository.name }}
+      sonar_project_name: ${{ github.repository }}
+      fail_on_severity: "CRITICAL,HIGH"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
