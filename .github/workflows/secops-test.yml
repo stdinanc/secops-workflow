@@ -1,0 +1,49 @@
+name: SecOps Test Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-scan:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build
+        run: mvn -B -DskipTests package
+
+      - name: SonarQube Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn -B sonar:sonar \
+            -Dsonar.projectKey=devsecops-security-pipeline \
+            -Dsonar.projectName=devsecops-security-pipeline \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.token=$SONAR_TOKEN
+
+      - name: Build Docker image
+        run: docker build -t secops-vulnerable-demo:${{ github.sha }} .
+
+      - name: Trivy Filesystem Scan
+        run: trivy fs --exit-code 0 --severity LOW,MEDIUM,HIGH,CRITICAL --format table .
+
+      - name: Trivy Image Scan
+        run: trivy image --exit-code 0 --severity LOW,MEDIUM,HIGH,CRITICAL --format table secops-vulnerable-demo:${{ github.sha }}
+
+      - name: Trivy IaC Scan
+        run: trivy config --exit-code 0 --severity LOW,MEDIUM,HIGH,CRITICAL --format table .

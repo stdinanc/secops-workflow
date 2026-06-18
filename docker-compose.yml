@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  secops-demo:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Dummy value for secret-detection tests. Do not use real secrets in this repository.
+      AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE"
+      APP_DEBUG: "true"
+    privileged: true
