@@ -26,7 +26,7 @@ permissions:
 jobs:
   security:
     name: Security Pipeline
-    uses: stdinanc/devsecops-security-platform/.github/workflows/security-pipeline.yml@v1
+    uses: stdinanc/devsecops-security-platform/.github/workflows/security-pipeline.yml@main
     with:
       scan_profile: ${{ github.event.inputs.scan_profile || 'standard' }}
       sonar_project_key: ${{ github.repository_owner }}_${{ github.event.repository.name }}
