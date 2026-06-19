@@ -74,4 +74,4 @@ Workflow `runs-on: self-hosted` olarak ayarlandı. GitHub repo üzerinde self-ho
 
 ## Beklenen Pipeline Davranışı
 
-İlk aşamada amaç pipeline'ın fail olması değil, bulgu üretmesidir. Bu yüzden Trivy adımlarında `--exit-code 0` kullanıldı. İstersen daha sonra kalite kapısı mantığı için HIGH/CRITICAL bulgularda pipeline'ı fail edecek şekilde `--exit-code 1` yapabilirsin.
+İlk aşamada amaç pipeline'ın fail olması değil, bulgu üretmesidir. Bu yüzden Trivy adımlarında `--exit-code 0` kullanıldı. İstersen daha sonra kalite kapısı mantığı için HIGH/CRITICAL bulgularda pipeline'ı fail edecek şekilde `--exit-code 1` yapabilirsiniz.
